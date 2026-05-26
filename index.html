@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BB Calc">
+  <meta name="description" content="Bodybuilding workout build-up calculator with progressive overload tracking">
+  <title>BB Calculator</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f4;
+      --bg3: #efefed;
+      --text: #1a1a18;
+      --text2: #6b6b67;
+      --text3: #a8a8a4;
+      --border: rgba(0,0,0,0.12);
+      --border2: rgba(0,0,0,0.22);
+      --danger-bg: #fef2f2;
+      --danger: #b91c1c;
+      --info-bg: #eff6ff;
+      --info: #1d4ed8;
+      --success-bg: #f0fdf4;
+      --success: #15803d;
+      --success-border: rgba(21,128,61,0.3);
+      --radius: 8px;
+      --radius-lg: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --bg2: #242424;
+        --bg3: #2e2e2e;
+        --text: #f0f0ee;
+        --text2: #9a9a96;
+        --text3: #666662;
+        --border: rgba(255,255,255,0.1);
+        --border2: rgba(255,255,255,0.2);
+        --danger-bg: #2d1515;
+        --danger: #fca5a5;
+        --info-bg: #1a2744;
+        --info: #93c5fd;
+        --success-bg: #14281e;
+        --success: #86efac;
+        --success-border: rgba(134,239,172,0.3);
+        --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+      }
+    }
+
+    html { overscroll-behavior-y: contain; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+      padding-bottom: env(safe-area-inset-bottom);
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: contain;
+    }
+    button, input { touch-action: manipulation; font-family: inherit; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 0.5px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+      padding-top: env(safe-area-inset-top);
+    }
+    .tab {
+      flex: 1;
+      padding: 12px 2px;
+      background: transparent;
+      color: var(--text3);
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      transition: color 0.15s, border-color 0.15s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .tab.on { color: var(--text); border-bottom-color: var(--text); }
+    .tab:active { background: var(--bg2); }
+
+    .shdr {
+      padding: 11px 14px 8px;
+      font-size: 12px;
+      color: var(--text2);
+      border-bottom: 0.5px solid var(--border);
+    }
+    .body { padding: 10px; }
+
+    /* Cards */
+    .card {
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      background: var(--bg);
+    }
+    .chdr {
+      padding: 10px 14px;
+      border-bottom: 0.5px solid var(--border);
+      background: var(--bg2);
+    }
+    .cname { font-weight: 500; font-size: 13px; }
+    .cnote { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+    /* Input row */
+    .irow {
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .ilbl { font-size: 11px; color: var(--text2); font-weight: 500; flex: 1; }
+    .adj {
+      background: var(--bg2);
+      color: var(--text);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 32px;
+      text-align: center;
+      transition: transform 0.08s ease, background 0.12s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .adj:active { transform: scale(0.92); background: var(--bg3); }
+    .tin {
+      width: 76px;
+      background: transparent;
+      border: 0.5px solid var(--border2);
+      color: var(--text);
+      text-align: center;
+      padding: 7px 2px;
+      border-radius: var(--radius);
+      font-size: 17px;
+      font-weight: 500;
+      transition: border-color 0.15s, background 0.4s;
+    }
+    .tin:focus { outline: none; border-color: var(--text2); background: var(--bg2); }
+    .tin.saved { background: var(--success-bg); border-color: var(--success-border); }
+    .kglbl { font-size: 12px; color: var(--text2); }
+
+    /* Table */
+    .tbl { padding: 8px 14px 2px; }
+    .th {
+      font-size: 10px;
+      color: var(--text3);
+      font-weight: 500;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+    .th.g { color: var(--success); }
+    .trow {
+      gap: 4px;
+      margin-bottom: 2px;
+      border-radius: 5px;
+      padding: 4px 3px;
+    }
+    .trow.alt { background: var(--bg2); }
+    .trow.fr { background: var(--danger-bg); }
+    .trow.bo { background: var(--info-bg); }
+    .tc { font-size: 13px; color: var(--text2); }
+    .tc.w { color: var(--text); font-weight: 500; }
+    .tc.lk { color: var(--text3); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+    .tc.fd { color: var(--danger); font-weight: 500; }
+    .tc.bd { color: var(--info); font-weight: 500; }
+    .tc.gd { color: var(--success); font-weight: 500; }
+    .tc.xs { font-size: 12px; color: var(--text3); }
+
+    /* Gap bar */
+    .gapbar {
+      padding: 4px 14px 6px;
+      display: flex;
+      gap: 14px;
+      font-size: 10px;
+      color: var(--text3);
+    }
+    .hbtn {
+      margin: 6px 14px 12px;
+      display: block;
+      width: calc(100% - 28px);
+      background: var(--bg2);
+      color: var(--text2);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 11px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+      transition: transform 0.08s ease, background 0.12s;
+    }
+    .hbtn:active { transform: scale(0.985); }
+    .hbtn.on {
+      background: var(--success-bg);
+      color: var(--success);
+      border-color: var(--success-border);
+    }
+
+    /* Footer */
+    .footer {
+      padding: 12px 14px calc(32px + env(safe-area-inset-bottom));
+      font-size: 10px;
+      color: var(--text3);
+      text-align: center;
+      line-height: 1.8;
+      border-top: 0.5px solid var(--border);
+    }
+    .footer .lock { display: inline-block; vertical-align: -1px; }
+    .rstbtn {
+      background: transparent;
+      color: var(--text3);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 10px;
+      margin-top: 8px;
+      transition: background 0.12s;
+    }
+    .rstbtn:active { background: var(--bg2); }
+
+    /* Toast for offline / install */
+    .toast {
+      position: fixed;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: var(--text);
+      color: var(--bg);
+      padding: 10px 16px;
+      border-radius: 24px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Hide number input spinners */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+  // ── Trickle-down build-up logic ──────────────────────────────────────────
+  // Last build-up set sits at 88-90% of top — leaves a proper gap for the
+  // failure set so you arrive at it fresh enough to truly max out
+  const PCT = {
+    5: [.55, .65, .75, .83, .90],
+    4: [.58, .70, .80, .88],
+    3: [.62, .76, .88],
+    2: [.65, .82]
+  };
+
+  const rnd = (v, inc) => Math.round(Math.round(v / inc) * inc * 1000) / 1000;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+  const fmt = w => { const n = Math.round(w * 100) / 100; return `${n}`; };
+  const anchorSets = (aTop, n, inc) => PCT[n].map(p => rnd(aTop * p, inc));
+
+  // Trickle rule: Set 1 ALWAYS fixed. Each set above adjusts at 50% the rate of the one above it.
+  const trickle = (aS, aTop, cTop, n, inc) => {
+    const d = cTop - aTop;
+    return aS.map((b, i) => {
+      const raw = i === 0 ? b : rnd(b + d * Math.pow(0.5, n - i), inc);
+      return clamp(raw, inc, rnd(cTop - inc, inc));
+    });
+  };
+
+  // ── Exercise data ─────────────────────────────────────────────────────────
+  const SESSIONS = [
+    {
+      id: 1, lbl: "S1", name: "Chest & Triceps", exs: [
+        { id: "fly",     name: "Fly movement",           note: "Cable fly / DB fly / pec dec — rotate",   n: 5, reps: [10,8,6,6,6],   bo: false, fc: 1, inc: 2.5, aTop: 115,   prog: 2.5, fr: "4-6" },
+        { id: "press",   name: "Press movement",         note: "Barbell / DB / machine press — rotate",   n: 3, reps: [8,6,6],        bo: false, fc: 1, inc: 2.5, aTop: 95,    prog: 2.5, fr: "4-6" },
+        { id: "incline", name: "Incline Smith bench",    note: "Upper chest — control the descent",       n: 3, reps: [8,6,6],        bo: false, fc: 1, inc: 2.5, aTop: 85,    prog: 2.5, fr: "4-6" },
+        { id: "push",    name: "Tricep pushdowns",       note: "Cable / rope",                            n: 5, reps: [10,8,6,6,6],   bo: false, fc: 1, inc: 2.5, aTop: 40,    prog: 2.5, fr: "4-6" },
+        { id: "skull",   name: "Incline skull crushers", note: "Long head — full stretch at bottom",      n: 3, reps: [8,6,6],        bo: false, fc: 1, inc: 2.5, aTop: 50,    prog: 2.5, fr: "6"   },
+      ]
+    },
+    {
+      id: 2, lbl: "S2", name: "Back & Biceps", exs: [
+        { id: "pull",    name: "Pull down",              note: "Lat pulldown / pull-up — rotate",         n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 2.5, aTop: 97,    prog: 2.5, fr: "4-6" },
+        { id: "row",     name: "Row movement",           note: "Cable / barbell / DB row — rotate",       n: 3, reps: [8,6,6],        bo: false, fc: 1, inc: 2.5, aTop: 102.5, prog: 2.5, fr: "4-6" },
+        { id: "dead",    name: "Deadlift",               note: "",                                        n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 2.5, aTop: 145,   prog: 5,   fr: "4-6" },
+        { id: "dbcurl",  name: "Seated alt DB curl",     note: "Enter per-dumbbell weight",               n: 5, reps: [12,10,6,6,6],  bo: false, fc: 1, inc: 2.5, aTop: 32.5,  prog: 2.5, fr: "4-6" },
+        { id: "ezcurl",  name: "EZ bar curl",            note: "2 build-up sets → 2 failure sets",        n: 2, reps: [12,10],        bo: false, fc: 2, inc: 2.5, aTop: 50,    prog: 2.5, fr: "8+"  },
+      ]
+    },
+    {
+      id: 3, lbl: "S3", name: "Shoulders & Calves", exs: [
+        { id: "ohp",     name: "Shoulder press",         note: "OHP / DB / machine — rotate",             n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 2.5, aTop: 55,    prog: 2.5, fr: "4-6" },
+        { id: "rdelt",   name: "Rear delts",             note: "Reverse pec dec / bent-over DB fly",      n: 4, reps: [8,6,6,6],      bo: true,  fc: 1, inc: 2.5, aTop: 82,    prog: 2.5, fr: "4-6" },
+        { id: "lats",    name: "Side lateral raises",    note: "Dumbbell",                                n: 4, reps: [10,8,6,6],     bo: true,  fc: 1, inc: 2.5, aTop: 27,    prog: 2.5, fr: "4-6" },
+      ]
+    },
+    {
+      id: 4, lbl: "S4", name: "Legs", exs: [
+        { id: "lcurl",   name: "Lying leg curl",                note: "Machine",                          n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 2.5, aTop: 74,    prog: 2.5, fr: "4-6" },
+        { id: "sldl",    name: "Stiff legged deadlift",         note: "",                                 n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 2.5, aTop: 100,   prog: 5,   fr: "4-6" },
+        { id: "squat",   name: "Squat",                         note: "Drive through the glutes",         n: 4, reps: [8,6,6,6],      bo: true,  fc: 1, inc: 2.5, aTop: 145,   prog: 5,   fr: "4-6" },
+        { id: "lpress",  name: "Leg press / hack / pendulum",   note: "Pick one — rotate each session",   n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 5,   aTop: 270,   prog: 10,  fr: "4-6" },
+      ]
+    },
+  ];
+
+  const ANCHORS = {};
+  SESSIONS.forEach(s => s.exs.forEach(e => { ANCHORS[e.id] = anchorSets(e.aTop, e.n, e.inc); }));
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const state = { si: 0, tops: {}, next: {} };
+  SESSIONS.forEach(s => s.exs.forEach(e => { state.tops[e.id] = e.aTop; state.next[e.id] = false; }));
+
+  const STORAGE_KEY = 'bb_final_v1';
+  const SESSION_KEY = 'bb_session_v1';
+
+  // ── Storage (localStorage — synchronous) ──────────────────────────────────
+  function loadSaved() {
+    try {
+      const sv = localStorage.getItem(STORAGE_KEY);
+      if (sv) {
+        const parsed = JSON.parse(sv);
+        SESSIONS.forEach(s => s.exs.forEach(e => {
+          if (parsed[e.id] != null && Number.isFinite(parsed[e.id])) {
+            state.tops[e.id] = parsed[e.id];
+          }
+        }));
+      }
+      const si = localStorage.getItem(SESSION_KEY);
+      if (si !== null) {
+        const n = parseInt(si, 10);
+        if (n >= 0 && n < SESSIONS.length) state.si = n;
+      }
+    } catch (err) {
+      console.warn('loadSaved failed', err);
+    }
+  }
+
+  function persist() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tops)); }
+    catch (err) { showToast('Save failed — storage full?'); }
+  }
+
+  function persistSession() {
+    try { localStorage.setItem(SESSION_KEY, String(state.si)); } catch (e) {}
+  }
+
+  function resetAll() {
+    if (!confirm('Reset all weights to starting values? This cannot be undone.')) return;
+    SESSIONS.forEach(s => s.exs.forEach(e => { state.tops[e.id] = e.aTop; state.next[e.id] = false; }));
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    render();
+    showToast('Weights reset');
+  }
+
+  // ── Toast helper ──────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // ── Saved indicator pulse on input ────────────────────────────────────────
+  function flashSaved(id) {
+    requestAnimationFrame(() => {
+      const inp = document.querySelector(`input[data-id="${id}"]`);
+      if (!inp) return;
+      inp.classList.add('saved');
+      setTimeout(() => inp.classList.remove('saved'), 600);
+    });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const LOCK_SVG = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><circle cx="12" cy="16" r="1"></circle><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>';
+
+  function renderCard(ex) {
+    const aS = ANCHORS[ex.id];
+    const top = state.tops[ex.id];
+    const sn = state.next[ex.id];
+    const buW = trickle(aS, ex.aTop, top, ex.n, ex.inc);
+    const nTop = top + ex.prog;
+    const nBuW = trickle(aS, ex.aTop, nTop, ex.n, ex.inc);
+    const boW = rnd(top * 0.6, ex.inc);
+    const nBoW = rnd(nTop * 0.6, ex.inc);
+    const gap = Math.round((top - buW[buW.length - 1]) * 10) / 10;
+    const gapPct = Math.round(gap / top * 100);
+    const g = sn ? "56px 32px 1fr 1fr" : "56px 32px 1fr";
+
+    let rows = "";
+    buW.forEach((w, i) => {
+      const fixed = i === 0;
+      rows += `<div class="trow ${i % 2 === 0 ? 'alt' : ''}" style="display:grid;grid-template-columns:${g};gap:4px">
+        <span class="tc ${fixed ? 'lk' : ''}">${fixed ? `Set 1 ${LOCK_SVG}` : `Set ${i + 1}`}</span>
+        <span class="tc xs">${ex.reps[i]}&times;</span>
+        <span class="tc ${fixed ? 'lk' : 'w'}">${fmt(w)}&thinsp;kg</span>
+        ${sn ? `<span class="tc gd">${fmt(nBuW[i])}&thinsp;kg</span>` : `<span></span>`}
+      </div>`;
+    });
+
+    for (let fi = 0; fi < ex.fc; fi++) {
+      rows += `<div class="trow fr" style="display:grid;grid-template-columns:${g};gap:4px">
+        <span class="tc fd">${ex.fc > 1 ? `Fail ${fi + 1}` : "Failure"}</span>
+        <span class="tc fd xs">${ex.fr}&times;</span>
+        <span class="tc fd">${fmt(top)}&thinsp;kg</span>
+        ${sn ? `<span class="tc gd">${fmt(nTop)}&thinsp;kg</span>` : `<span></span>`}
+      </div>`;
+    }
+
+    if (ex.bo) {
+      rows += `<div class="trow bo" style="display:grid;grid-template-columns:${g};gap:4px">
+        <span class="tc bd">Backoff</span>
+        <span class="tc bd xs">12-15&times;</span>
+        <span class="tc bd">${fmt(boW)}&thinsp;kg</span>
+        ${sn ? `<span class="tc gd">${fmt(nBoW)}&thinsp;kg</span>` : `<span></span>`}
+      </div>`;
+    }
+
+    const hitLbl = ex.id === "ezcurl"
+      ? `Hit 8+ on both failure sets? &rarr; Next session (+${ex.prog}&thinsp;kg)`
+      : `Hit ${(ex.fr.split('-')[0] || ex.fr).replace('+','')} on failure? &rarr; Next session (+${ex.prog}&thinsp;kg)`;
+
+    return `<div class="card">
+      <div class="chdr">
+        <div class="cname">${ex.name}</div>
+        ${ex.note ? `<div class="cnote">${ex.note}</div>` : ""}
+      </div>
+      <div class="irow">
+        <span class="ilbl">Top heavy set</span>
+        <button class="adj" data-hold-id="${ex.id}" data-hold-delta="-${ex.inc}" aria-label="Decrease ${ex.inc} kg">&#8722;</button>
+        <input class="tin" data-id="${ex.id}" type="number" inputmode="decimal" value="${top}" step="${ex.inc}" min="${ex.inc}"
+          onfocus="this.select()"
+          oninput="setTopLive('${ex.id}',this.value)"
+          onchange="setTopCommit('${ex.id}',this.value)">
+        <button class="adj" data-hold-id="${ex.id}" data-hold-delta="${ex.inc}" aria-label="Increase ${ex.inc} kg">+</button>
+        <span class="kglbl">kg</span>
+      </div>
+      <div class="tbl">
+        <div style="display:grid;grid-template-columns:${g};gap:4px;margin-bottom:6px">
+          <span class="th">Set</span><span class="th">Reps</span><span class="th">Weight</span>
+          ${sn ? `<span class="th g">Next</span>` : `<span></span>`}
+        </div>
+        ${rows}
+      </div>
+      <div class="gapbar">
+        <span>Gap to failure: ${fmt(gap)}&thinsp;kg (${gapPct}%)</span>
+        <span>On hit: +${ex.prog}&thinsp;kg</span>
+      </div>
+      <button class="hbtn ${sn ? "on" : ""}" onclick="toggleNext('${ex.id}')">
+        ${sn ? `&#10003; Next session shown &mdash; top set ${fmt(nTop)}&thinsp;kg` : hitLbl}
+      </button>
+    </div>`;
+  }
+
+  function render() {
+    const s = SESSIONS[state.si];
+    document.getElementById("root").innerHTML = `
+      <div class="tabs">
+        ${SESSIONS.map((ss, i) => `<button class="tab ${i === state.si ? "on" : ""}" onclick="setSess(${i})">${ss.lbl}</button>`).join("")}
+      </div>
+      <div class="shdr">Session ${s.id} &mdash; ${s.name}</div>
+      <div class="body">${s.exs.map(renderCard).join("")}</div>
+      <div class="footer">
+        <span class="lock">${LOCK_SVG}</span>
+        Set 1 always fixed &mdash; each set trickles at half the rate of the one above it<br>
+        Last build-up at 88-90% of top &mdash; proper gap for the failure set<br>
+        Weights save automatically<br>
+        <button class="rstbtn" onclick="resetAll()">Reset all to starting weights</button>
+      </div>
+    `;
+    bindHoldButtons();
+  }
+
+  // ── Tab + value handlers ─────────────────────────────────────────────────
+  function setSess(i) { state.si = i; persistSession(); render(); }
+
+  function adj(id, d) {
+    const ex = SESSIONS.flatMap(s => s.exs).find(e => e.id === id);
+    state.tops[id] = Math.max(ex.inc, rnd((state.tops[id] || ex.aTop) + d, ex.inc));
+    render();
+    persist();
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+
+  // Live save — no re-render, keeps input focus while typing
+  function setTopLive(id, val) {
+    const ex = SESSIONS.flatMap(s => s.exs).find(e => e.id === id);
+    const v = parseFloat(val);
+    if (!isNaN(v) && v > 0) {
+      state.tops[id] = rnd(v, ex.inc);
+      persist();
+      flashSaved(id);
+    }
+  }
+
+  // Commit — full re-render with updated dependent UI (on blur / Enter)
+  function setTopCommit(id, val) {
+    const ex = SESSIONS.flatMap(s => s.exs).find(e => e.id === id);
+    const v = parseFloat(val);
+    if (!isNaN(v) && v > 0) {
+      state.tops[id] = rnd(v, ex.inc);
+      render();
+      persist();
+    } else {
+      render();
+    }
+  }
+
+  function toggleNext(id) {
+    state.next[id] = !state.next[id];
+    render();
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  // ── Hold-to-repeat on +/- buttons ────────────────────────────────────────
+  // Survives re-render because pointerup listens on document, not the button.
+  let holdToken = 0;
+  function startHold(id, delta) {
+    adj(id, delta);
+    const myToken = ++holdToken;
+    let t = setTimeout(function tick() {
+      if (myToken !== holdToken) return;
+      adj(id, delta);
+      t = setTimeout(tick, 90);
+    }, 420);
+  }
+  function endHold() { holdToken++; }
+
+  function bindHoldButtons() {
+    document.querySelectorAll('.adj[data-hold-id]').forEach(btn => {
+      const id = btn.getAttribute('data-hold-id');
+      const delta = parseFloat(btn.getAttribute('data-hold-delta'));
+      btn.addEventListener('pointerdown', e => { e.preventDefault(); startHold(id, delta); });
+    });
+  }
+
+  document.addEventListener('pointerup', endHold);
+  document.addEventListener('pointercancel', endHold);
+
+  // Expose functions for inline handlers
+  window.setSess = setSess;
+  window.adj = adj;
+  window.setTopLive = setTopLive;
+  window.setTopCommit = setTopCommit;
+  window.toggleNext = toggleNext;
+  window.resetAll = resetAll;
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadSaved();
+  render();
+
+  // ── Service worker registration (offline support) ────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('Update ready — restart app');
+            }
+          });
+        });
+      }).catch(err => console.warn('SW registration failed', err));
+    });
+  }
+</script>
+</body>
+</html>
