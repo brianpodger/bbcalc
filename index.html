@@ -453,7 +453,7 @@
 
     const hitLbl = ex.id === "ezcurl"
       ? `Hit 8+ on both failure sets? &rarr; Next session (+${ex.prog}&thinsp;kg)`
-      : `Hit ${(ex.fr.split('-')[0] || ex.fr).replace('+','')} on failure? &rarr; Next session (+${ex.prog}&thinsp;kg)`;
+      : `Hit ${(ex.fr.split('-').pop() || ex.fr).replace('+','')} on failure? &rarr; Next session (+${ex.prog}&thinsp;kg)`;
 
     return `<div class="card">
       <div class="chdr">
