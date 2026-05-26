@@ -245,6 +245,19 @@
     }
     .rstbtn:active { background: var(--bg2); }
 
+    /* Armed state — first tap of a required double-tap */
+    .armed {
+      border-color: var(--info) !important;
+      background: var(--info-bg) !important;
+      color: var(--info) !important;
+      animation: armPulse 0.35s ease-out;
+    }
+    @keyframes armPulse {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+
     /* Watermark — Hannya / oni mask signature in footer */
     .wmark {
       margin-top: 22px;
@@ -348,6 +361,8 @@
         { id: "ohp",     name: "Shoulder press",         note: "OHP / DB / machine — rotate",             n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 2.5, aTop: 55,    prog: 2.5, fr: "4-6" },
         { id: "rdelt",   name: "Rear delts",             note: "Reverse pec dec / bent-over DB fly",      n: 4, reps: [8,6,6,6],      bo: true,  fc: 1, inc: 2.5, aTop: 82,    prog: 2.5, fr: "4-6" },
         { id: "lats",    name: "Side lateral raises",    note: "Dumbbell",                                n: 4, reps: [10,8,6,6],     bo: true,  fc: 1, inc: 2.5, aTop: 27,    prog: 2.5, fr: "4-6" },
+        { id: "calves",  name: "Standing calf raises",   note: "Drop-set protocol — 3 rounds. If seated, do 2-3 TUT sets first",
+          kind: "calfdrop", inc: 2.5, aTop: 100, prog: 2.5 },
       ]
     },
     {
@@ -356,12 +371,16 @@
         { id: "sldl",    name: "Stiff legged deadlift",         note: "",                                 n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 2.5, aTop: 100,   prog: 5,   fr: "4-6" },
         { id: "squat",   name: "Squat",                         note: "Drive through the glutes",         n: 4, reps: [8,6,6,6],      bo: true,  fc: 1, inc: 2.5, aTop: 145,   prog: 5,   fr: "4-6" },
         { id: "lpress",  name: "Leg press / hack / pendulum",   note: "Pick one — rotate each session",   n: 5, reps: [10,8,6,6,6],   bo: true,  fc: 1, inc: 5,   aTop: 270,   prog: 10,  fr: "4-6" },
+        { id: "legext",  name: "Leg extension",                 note: "5 cluster sets — each: 15 / 5s / 12 / 5s / 10",
+          kind: "legext", inc: 2.5, aTop: 70, prog: 2.5 },
       ]
     },
   ];
 
   const ANCHORS = {};
-  SESSIONS.forEach(s => s.exs.forEach(e => { ANCHORS[e.id] = anchorSets(e.aTop, e.n, e.inc); }));
+  SESSIONS.forEach(s => s.exs.forEach(e => {
+    if (!e.kind) ANCHORS[e.id] = anchorSets(e.aTop, e.n, e.inc);
+  }));
 
   // ── State ─────────────────────────────────────────────────────────────────
   const state = { si: 0, tops: {}, next: {} };
@@ -433,7 +452,132 @@
   // ── Render ────────────────────────────────────────────────────────────────
   const LOCK_SVG = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><circle cx="12" cy="16" r="1"></circle><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>';
 
+  // ── Calf drop-set card (CALVES — STANDING CALF RAISES) ──────────────────
+  function renderCalfDropCard(ex) {
+    const top = state.tops[ex.id];
+    const sn = state.next[ex.id];
+    const nTop = top + ex.prog;
+
+    const calc = t => {
+      const drops = [];
+      let cur = t;
+      for (let i = 0; i < 4; i++) { cur = rnd(cur * 0.80, ex.inc); drops.push(cur); }
+      return { stretch: rnd(t * 0.40, ex.inc), half: rnd(t * 0.50, ex.inc), max: t, drops };
+    };
+    const cw = calc(top);
+    const cn = calc(nTop);
+    const g = sn ? "70px 60px 1fr 1fr" : "70px 60px 1fr";
+
+    let rows = "";
+    rows += `<div class="trow alt" style="display:grid;grid-template-columns:${g};gap:4px">
+      <span class="tc">Stretch &times;2</span><span class="tc xs">15&times;</span>
+      <span class="tc w">${fmt(cw.stretch)}&thinsp;kg</span>
+      ${sn ? `<span class="tc gd">${fmt(cn.stretch)}&thinsp;kg</span>` : `<span></span>`}
+    </div>`;
+    rows += `<div class="trow" style="display:grid;grid-template-columns:${g};gap:4px">
+      <span class="tc">Warm-up</span><span class="tc xs">6&times;</span>
+      <span class="tc w">${fmt(cw.half)}&thinsp;kg</span>
+      ${sn ? `<span class="tc gd">${fmt(cn.half)}&thinsp;kg</span>` : `<span></span>`}
+    </div>`;
+    rows += `<div class="trow fr" style="display:grid;grid-template-columns:${g};gap:4px">
+      <span class="tc fd">Max</span><span class="tc fd xs">4&times; fail</span>
+      <span class="tc fd">${fmt(cw.max)}&thinsp;kg</span>
+      ${sn ? `<span class="tc gd">${fmt(cn.max)}&thinsp;kg</span>` : `<span></span>`}
+    </div>`;
+    cw.drops.forEach((dw, i) => {
+      rows += `<div class="trow bo" style="display:grid;grid-template-columns:${g};gap:4px">
+        <span class="tc bd">Drop ${i + 1}</span><span class="tc bd xs">fail</span>
+        <span class="tc bd">${fmt(dw)}&thinsp;kg</span>
+        ${sn ? `<span class="tc gd">${fmt(cn.drops[i])}&thinsp;kg</span>` : `<span></span>`}
+      </div>`;
+    });
+
+    const hitLbl = `Hit 4 on max set? &rarr; Next session (+${ex.prog}&thinsp;kg)`;
+    return `<div class="card">
+      <div class="chdr">
+        <div class="cname">${ex.name}</div>
+        ${ex.note ? `<div class="cnote">${ex.note}</div>` : ""}
+      </div>
+      <div class="irow">
+        <span class="ilbl">Max set (4 RM)</span>
+        <button class="adj" onclick="dblFire(this, () => adj('${ex.id}', -${ex.inc}))" aria-label="Decrease ${ex.inc} kg">&#8722;</button>
+        <input class="tin" data-id="${ex.id}" type="number" inputmode="decimal" value="${top}" step="${ex.inc}" min="${ex.inc}"
+          onfocus="this.select()" oninput="setTopLive('${ex.id}',this.value)" onchange="setTopCommit('${ex.id}',this.value)">
+        <button class="adj" onclick="dblFire(this, () => adj('${ex.id}', ${ex.inc}))" aria-label="Increase ${ex.inc} kg">+</button>
+        <span class="kglbl">kg</span>
+      </div>
+      <div class="tbl">
+        <div style="display:grid;grid-template-columns:${g};gap:4px;margin-bottom:6px">
+          <span class="th">Step</span><span class="th">Reps</span><span class="th">Weight</span>
+          ${sn ? `<span class="th g">Next</span>` : `<span></span>`}
+        </div>
+        ${rows}
+      </div>
+      <div class="gapbar">
+        <span>Repeat &times; 3 rounds</span>
+        <span>Drops are 20% off current</span>
+      </div>
+      <button class="hbtn ${sn ? "on" : ""}" onclick="dblFire(this, () => toggleNext('${ex.id}'))">
+        ${sn ? `&#10003; Next session shown &mdash; max ${fmt(nTop)}&thinsp;kg` : hitLbl}
+      </button>
+    </div>`;
+  }
+
+  // ── Leg extension cluster card (QUADS — LEG EXTENSION) ──────────────────
+  function renderLegExtCard(ex) {
+    const top = state.tops[ex.id];
+    const sn = state.next[ex.id];
+    const nTop = top + ex.prog;
+    const PCTS = [0.70, 0.80, 0.90, 1.00, 1.00];
+    const sets = PCTS.map(p => rnd(top * p, ex.inc));
+    const nSets = PCTS.map(p => rnd(nTop * p, ex.inc));
+    const g = sn ? "56px 70px 1fr 1fr" : "56px 70px 1fr";
+
+    let rows = "";
+    sets.forEach((w, i) => {
+      const isTarget = i >= 3;
+      rows += `<div class="trow ${isTarget ? 'fr' : (i % 2 === 0 ? 'alt' : '')}" style="display:grid;grid-template-columns:${g};gap:4px">
+        <span class="tc ${isTarget ? 'fd' : ''}">Set ${i + 1}</span>
+        <span class="tc xs ${isTarget ? 'fd' : ''}">15/12/10</span>
+        <span class="tc ${isTarget ? 'fd' : 'w'}">${fmt(w)}&thinsp;kg</span>
+        ${sn ? `<span class="tc gd">${fmt(nSets[i])}&thinsp;kg</span>` : `<span></span>`}
+      </div>`;
+    });
+
+    const hitLbl = `Hit cluster on sets 4 &amp; 5? &rarr; Next session (+${ex.prog}&thinsp;kg)`;
+    return `<div class="card">
+      <div class="chdr">
+        <div class="cname">${ex.name}</div>
+        ${ex.note ? `<div class="cnote">${ex.note}</div>` : ""}
+      </div>
+      <div class="irow">
+        <span class="ilbl">Peak cluster weight</span>
+        <button class="adj" onclick="dblFire(this, () => adj('${ex.id}', -${ex.inc}))" aria-label="Decrease ${ex.inc} kg">&#8722;</button>
+        <input class="tin" data-id="${ex.id}" type="number" inputmode="decimal" value="${top}" step="${ex.inc}" min="${ex.inc}"
+          onfocus="this.select()" oninput="setTopLive('${ex.id}',this.value)" onchange="setTopCommit('${ex.id}',this.value)">
+        <button class="adj" onclick="dblFire(this, () => adj('${ex.id}', ${ex.inc}))" aria-label="Increase ${ex.inc} kg">+</button>
+        <span class="kglbl">kg</span>
+      </div>
+      <div class="tbl">
+        <div style="display:grid;grid-template-columns:${g};gap:4px;margin-bottom:6px">
+          <span class="th">Set</span><span class="th">Cluster</span><span class="th">Weight</span>
+          ${sn ? `<span class="th g">Next</span>` : `<span></span>`}
+        </div>
+        ${rows}
+      </div>
+      <div class="gapbar">
+        <span>Cluster: 15 / 5s / 12 / 5s / 10</span>
+        <span>Sets 4-5 = target weight</span>
+      </div>
+      <button class="hbtn ${sn ? "on" : ""}" onclick="dblFire(this, () => toggleNext('${ex.id}'))">
+        ${sn ? `&#10003; Next session shown &mdash; peak ${fmt(nTop)}&thinsp;kg` : hitLbl}
+      </button>
+    </div>`;
+  }
+
   function renderCard(ex) {
+    if (ex.kind === 'calfdrop') return renderCalfDropCard(ex);
+    if (ex.kind === 'legext')   return renderLegExtCard(ex);
     const aS = ANCHORS[ex.id];
     const top = state.tops[ex.id];
     const sn = state.next[ex.id];
@@ -486,12 +630,12 @@
       </div>
       <div class="irow">
         <span class="ilbl">Top heavy set</span>
-        <button class="adj" data-hold-id="${ex.id}" data-hold-delta="-${ex.inc}" aria-label="Decrease ${ex.inc} kg">&#8722;</button>
+        <button class="adj" onclick="dblFire(this, () => adj('${ex.id}', -${ex.inc}))" aria-label="Decrease ${ex.inc} kg">&#8722;</button>
         <input class="tin" data-id="${ex.id}" type="number" inputmode="decimal" value="${top}" step="${ex.inc}" min="${ex.inc}"
           onfocus="this.select()"
           oninput="setTopLive('${ex.id}',this.value)"
           onchange="setTopCommit('${ex.id}',this.value)">
-        <button class="adj" data-hold-id="${ex.id}" data-hold-delta="${ex.inc}" aria-label="Increase ${ex.inc} kg">+</button>
+        <button class="adj" onclick="dblFire(this, () => adj('${ex.id}', ${ex.inc}))" aria-label="Increase ${ex.inc} kg">+</button>
         <span class="kglbl">kg</span>
       </div>
       <div class="tbl">
@@ -505,7 +649,7 @@
         <span>Gap to failure: ${fmt(gap)}&thinsp;kg (${gapPct}%)</span>
         <span>On hit: +${ex.prog}&thinsp;kg</span>
       </div>
-      <button class="hbtn ${sn ? "on" : ""}" onclick="toggleNext('${ex.id}')">
+      <button class="hbtn ${sn ? "on" : ""}" onclick="dblFire(this, () => toggleNext('${ex.id}'))">
         ${sn ? `&#10003; Next session shown &mdash; top set ${fmt(nTop)}&thinsp;kg` : hitLbl}
       </button>
     </div>`;
@@ -515,7 +659,7 @@
     const s = SESSIONS[state.si];
     document.getElementById("root").innerHTML = `
       <div class="tabs">
-        ${SESSIONS.map((ss, i) => `<button class="tab ${i === state.si ? "on" : ""}" onclick="setSess(${i})">${ss.lbl}</button>`).join("")}
+        ${SESSIONS.map((ss, i) => `<button class="tab ${i === state.si ? "on" : ""}" onclick="dblFire(this, () => setSess(${i}))">${ss.lbl}</button>`).join("")}
       </div>
       <div class="shdr">Session ${s.id} &mdash; ${s.name}</div>
       <div class="body">${s.exs.map(renderCard).join("")}</div>
@@ -523,12 +667,13 @@
         <span class="lock">${LOCK_SVG}</span>
         Set 1 always fixed &mdash; each set trickles at half the rate of the one above it<br>
         Last build-up at 88-90% of top &mdash; proper gap for the failure set<br>
+        Calves &amp; leg extension follow their own protocol (drop sets / clusters)<br>
+        Buttons require a double-tap (first tap arms, second fires)<br>
         Weights save automatically<br>
-        <button class="rstbtn" onclick="resetAll()">Reset all to starting weights</button>
+        <button class="rstbtn" onclick="dblFire(this, () => resetAll())">Reset all to starting weights</button>
         <div class="wmark"><img src="assets/watermark.png" alt="" loading="lazy" draggable="false"></div>
       </div>
     `;
-    bindHoldButtons();
   }
 
   // ── Tab + value handlers ─────────────────────────────────────────────────
@@ -572,38 +717,40 @@
     if (navigator.vibrate) navigator.vibrate(8);
   }
 
-  // ── Hold-to-repeat on +/- buttons ────────────────────────────────────────
-  // Survives re-render because pointerup listens on document, not the button.
-  let holdToken = 0;
-  function startHold(id, delta) {
-    adj(id, delta);
-    const myToken = ++holdToken;
-    let t = setTimeout(function tick() {
-      if (myToken !== holdToken) return;
-      adj(id, delta);
-      t = setTimeout(tick, 90);
-    }, 420);
+  // ── Double-tap-to-fire on all buttons ────────────────────────────────────
+  // First tap arms (visual pulse + tint). Second tap on the SAME button within
+  // 900 ms fires the action. Tapping a different button (or waiting) disarms.
+  let _dblTimer = null;
+  let _dblTarget = null;
+  function dblFire(el, fn) {
+    if (_dblTarget === el && _dblTimer) {
+      clearTimeout(_dblTimer);
+      _dblTimer = null; _dblTarget = null;
+      el.classList.remove('armed');
+      fn();
+      return;
+    }
+    if (_dblTarget) {
+      _dblTarget.classList.remove('armed');
+      clearTimeout(_dblTimer);
+    }
+    el.classList.add('armed');
+    _dblTarget = el;
+    _dblTimer = setTimeout(() => {
+      el.classList.remove('armed');
+      _dblTimer = null; _dblTarget = null;
+    }, 900);
+    if (navigator.vibrate) navigator.vibrate(6);
   }
-  function endHold() { holdToken++; }
 
-  function bindHoldButtons() {
-    document.querySelectorAll('.adj[data-hold-id]').forEach(btn => {
-      const id = btn.getAttribute('data-hold-id');
-      const delta = parseFloat(btn.getAttribute('data-hold-delta'));
-      btn.addEventListener('pointerdown', e => { e.preventDefault(); startHold(id, delta); });
-    });
-  }
-
-  document.addEventListener('pointerup', endHold);
-  document.addEventListener('pointercancel', endHold);
-
-  // Expose functions for inline handlers
+  // Expose for inline handlers
   window.setSess = setSess;
   window.adj = adj;
   window.setTopLive = setTopLive;
   window.setTopCommit = setTopCommit;
   window.toggleNext = toggleNext;
   window.resetAll = resetAll;
+  window.dblFire = dblFire;
 
   // ── Init ──────────────────────────────────────────────────────────────────
   loadSaved();
