@@ -342,13 +342,23 @@
   // failure set + working sets stay on fine inc for precise progression.
   const anchorSets = (aTop, n, warmInc) => PCT[n].map(p => rnd(aTop * p, warmInc));
 
-  // Trickle rule: Set 1 ALWAYS fixed. Each set above adjusts at 50% the rate of the one above it.
-  const trickle = (aS, aTop, cTop, n, warmInc, inc) => {
+  // Trickle rule (matches audio brief):
+  //  - Set 1 ALWAYS fixed at its anchor (10 in the 10/20/30/40/50 example).
+  //  - Each set above adjusts at 50% the rate of the one above it
+  //    (so set 4 moves half as much as the top, set 3 a quarter, etc.).
+  //  - Deadband: if the calculated change is within half an `inc` step,
+  //    the warm-up STAYS at its anchor (audio: "or just leave it at 40").
+  //  - When it does move, it lands on the precise `inc` so 42.5 shows
+  //    as 42.5 — not rounded up to 45.
+  const trickle = (aS, aTop, cTop, n, inc) => {
     const d = cTop - aTop;
-    const maxWarm = rnd(cTop - inc, warmInc);
+    const maxWarm = cTop - inc;
     return aS.map((b, i) => {
-      const raw = i === 0 ? b : rnd(b + d * Math.pow(0.5, n - i), warmInc);
-      return clamp(raw, warmInc, maxWarm);
+      if (i === 0) return b;
+      const precise = b + d * Math.pow(0.5, n - i);
+      const delta = precise - b;
+      if (Math.abs(delta) <= inc / 2) return b;
+      return clamp(rnd(precise, inc), inc, maxWarm);
     });
   };
 
@@ -613,9 +623,9 @@
     const top = state.tops[ex.id];
     const sn = state.next[ex.id];
     const wInc = ex.warmInc || ex.inc;
-    const buW = trickle(aS, ex.aTop, top, ex.n, wInc, ex.inc);
+    const buW = trickle(aS, ex.aTop, top, ex.n, ex.inc);
     const nTop = top + ex.prog;
-    const nBuW = trickle(aS, ex.aTop, nTop, ex.n, wInc, ex.inc);
+    const nBuW = trickle(aS, ex.aTop, nTop, ex.n, ex.inc);
     const boW = rnd(top * 0.6, wInc);
     const nBoW = rnd(nTop * 0.6, wInc);
     const gap = Math.round((top - buW[buW.length - 1]) * 10) / 10;

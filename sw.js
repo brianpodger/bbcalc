@@ -1,7 +1,7 @@
 // BB Calculator — service worker
 // Strategy: network-first for the HTML shell (so updates land quickly),
 // cache-first for everything else (fast loads, works offline).
-const CACHE = 'bb-calc-v4';
+const CACHE = 'bb-calc-v5';
 const ASSETS = [
   './',
   './index.html',
