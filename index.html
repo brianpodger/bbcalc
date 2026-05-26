@@ -245,6 +245,30 @@
     }
     .rstbtn:active { background: var(--bg2); }
 
+    /* Watermark — Hannya / oni mask signature in footer */
+    .wmark {
+      margin-top: 22px;
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: none;
+    }
+    .wmark img {
+      width: 128px;
+      height: auto;
+      display: inline-block;
+      opacity: 0.4;
+      mix-blend-mode: multiply;
+      transition: opacity 0.3s;
+    }
+    @media (prefers-color-scheme: dark) {
+      .wmark img {
+        opacity: 0.55;
+        mix-blend-mode: normal;
+        filter: invert(1) brightness(1.05);
+      }
+    }
+
     /* Toast for offline / install */
     .toast {
       position: fixed;
@@ -501,6 +525,7 @@
         Last build-up at 88-90% of top &mdash; proper gap for the failure set<br>
         Weights save automatically<br>
         <button class="rstbtn" onclick="resetAll()">Reset all to starting weights</button>
+        <div class="wmark"><img src="assets/watermark.png" alt="" loading="lazy" draggable="false"></div>
       </div>
     `;
     bindHoldButtons();

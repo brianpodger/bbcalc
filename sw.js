@@ -1,13 +1,14 @@
 // BB Calculator — service worker
 // Strategy: network-first for the HTML shell (so updates land quickly),
 // cache-first for everything else (fast loads, works offline).
-const CACHE = 'bb-calc-v1';
+const CACHE = 'bb-calc-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './assets/watermark.png'
 ];
 
 self.addEventListener('install', e => {
